@@ -1,7 +1,7 @@
 // Vercel Serverless Function for Smart Prompt Generation
 // Generates prompt templates from user ideas using Gemini AI
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     // Only allow POST requests
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed. Use POST.' });
