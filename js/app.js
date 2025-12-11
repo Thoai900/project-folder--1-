@@ -2082,7 +2082,7 @@ function renderShowcase() {
 
             <!-- Prompt Engineering Section -->
             <div class="mb-24">
-                <div class="rounded-3xl p-10 md:p-16 border ${styles.border} bg-gradient-to-br from-indigo-900/20 to-purple-900/20 relative overflow-hidden" style="background-image: url('images/Gemini_Generated_Image_kjo9sgkjo9sgkjo9.png'); background-size: cover; background-position: center; background-attachment: fixed;">
+                <div class="rounded-3xl p-10 md:p-16 border border-indigo-500/30 bg-gradient-to-br from-indigo-900/20 to-purple-900/20 relative overflow-hidden" style="background-image: url('images/Gemini_Generated_Image_kjo9sgkjo9sgkjo9.png'); background-size: cover; background-position: center; background-attachment: fixed;">
                     <div class="absolute inset-0 bg-gradient-to-br from-indigo-900/60 to-purple-900/60 rounded-3xl"></div>
                     <div class="absolute top-0 left-0 w-96 h-96 bg-indigo-500/15 rounded-full blur-[120px]"></div>
                     <div class="absolute bottom-0 right-0 w-80 h-80 bg-purple-500/10 rounded-full blur-[100px]"></div>
@@ -2092,55 +2092,55 @@ function renderShowcase() {
                             <h3 class="text-4xl md:text-5xl font-black bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-4">
                                 ✨ Prompt Engineering - Chìa khóa AI
                             </h3>
-                            <p class="text-lg ${styles.textSecondary} max-w-3xl mx-auto">
+                            <p class="text-lg text-gray-300 max-w-3xl mx-auto">
                                 Trong thời đại AI, cách bạn <span class="text-indigo-400 font-bold">đặt câu hỏi</span> quyết định chất lượng câu trả lời. Prompt tốt = Kết quả tuyệt vời.
                             </p>
                         </div>
 
                         <div class="grid md:grid-cols-3 gap-6 mb-12">
-                            <div class="${styles.cardBg} p-8 rounded-2xl border ${styles.border} hover:border-indigo-500/50 transition-all">
+                            <div class="bg-indigo-500/10 p-8 rounded-2xl border border-indigo-500/20 hover:border-indigo-500/50 transition-all">
                                 <div class="text-4xl mb-4">🎯</div>
-                                <h4 class="text-xl font-bold ${styles.textPrimary} mb-3">Specificity (Cụ thể)</h4>
-                                <p class="${styles.textSecondary} text-sm">Prompt càng chi tiết, AI hiểu ý bạn càng tốt. Thay vì "Viết về AI" hãy "Viết bài 1000 từ về ứng dụng AI trong y tế"</p>
+                                <h4 class="text-xl font-bold text-white mb-3">Specificity (Cụ thể)</h4>
+                                <p class="text-gray-400 text-sm">Prompt càng chi tiết, AI hiểu ý bạn càng tốt. Thay vì "Viết về AI" hãy "Viết bài 1000 từ về ứng dụng AI trong y tế"</p>
                             </div>
                             
-                            <div class="${styles.cardBg} p-8 rounded-2xl border ${styles.border} hover:border-purple-500/50 transition-all">
+                            <div class="bg-purple-500/10 p-8 rounded-2xl border border-purple-500/20 hover:border-purple-500/50 transition-all">
                                 <div class="text-4xl mb-4">🎨</div>
-                                <h4 class="text-xl font-bold ${styles.textPrimary} mb-3">Context (Bối cảnh)</h4>
-                                <p class="${styles.textSecondary} text-sm">Cung cấp thông tin nền tảng giúp AI hiểu rõ nội dung. "Tôi là một người mới bắt đầu lập trình, giải thích React cho tôi"</p>
+                                <h4 class="text-xl font-bold text-white mb-3">Context (Bối cảnh)</h4>
+                                <p class="text-gray-400 text-sm">Cung cấp thông tin nền tảng giúp AI hiểu rõ nội dung. "Tôi là một người mới bắt đầu lập trình, giải thích React cho tôi"</p>
                             </div>
 
-                            <div class="${styles.cardBg} p-8 rounded-2xl border ${styles.border} hover:border-pink-500/50 transition-all">
+                            <div class="bg-pink-500/10 p-8 rounded-2xl border border-pink-500/20 hover:border-pink-500/50 transition-all">
                                 <div class="text-4xl mb-4">🔄</div>
-                                <h4 class="text-xl font-bold ${styles.textPrimary} mb-3">Iteration (Cải tiến)</h4>
-                                <p class="${styles.textSecondary} text-sm">Tinh chỉnh lại prompt dựa trên kết quả. Kết quả chưa ưng ý? Hãy điều chỉnh và thử lại ngay!</p>
+                                <h4 class="text-xl font-bold text-white mb-3">Iteration (Cải tiến)</h4>
+                                <p class="text-gray-400 text-sm">Tinh chỉnh lại prompt dựa trên kết quả. Kết quả chưa ưng ý? Hãy điều chỉnh và thử lại ngay!</p>
                             </div>
                         </div>
 
                         <div class="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-2xl p-8 mb-12">
-                            <h4 class="text-xl font-bold ${styles.textPrimary} mb-4 flex items-center gap-2">
+                            <h4 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
                                 <i data-lucide="lightbulb" class="text-yellow-400" size="24"></i>
                                 Ví dụ: Prompt tồi vs Prompt tốt
                             </h4>
                             <div class="grid md:grid-cols-2 gap-6">
                                 <div class="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
                                     <p class="text-sm font-bold text-red-400 mb-2">❌ Prompt Tồi:</p>
-                                    <p class="${styles.textSecondary} text-sm italic">"Giải thích machine learning"</p>
+                                    <p class="text-gray-400 text-sm italic">"Giải thích machine learning"</p>
                                 </div>
                                 <div class="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
                                     <p class="text-sm font-bold text-green-400 mb-2">✅ Prompt Tốt:</p>
-                                    <p class="${styles.textSecondary} text-sm italic">"Giải thích machine learning cho một người không có background về toán học. Sử dụng ví dụ thực tế từ đời sống hàng ngày. Tập trung vào các thuật toán phổ biến như Linear Regression, Decision Tree."</p>
+                                    <p class="text-gray-400 text-sm italic">"Giải thích machine learning cho một người không có background về toán học. Sử dụng ví dụ thực tế từ đời sống hàng ngày. Tập trung vào các thuật toán phổ biến như Linear Regression, Decision Tree."</p>
                                 </div>
                             </div>
                         </div>
 
                         <div class="text-center">
-                            <h4 class="text-2xl font-bold ${styles.textPrimary} mb-6">Muốn tinh chỉnh Prompt nhanh hơn?</h4>
+                            <h4 class="text-2xl font-bold text-white mb-6">Muốn tinh chỉnh Prompt nhanh hơn?</h4>
                             <button onclick="installExtension()" class="px-8 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold transition-all transform hover:scale-105 active:scale-95 flex items-center gap-3 mx-auto shadow-lg hover:shadow-xl">
                                 <i data-lucide="download" size="20"></i>
                                 Cài đặt Extension Tinh chỉnh Prompt
                             </button>
-                            <p class="text-sm ${styles.textSecondary} mt-4">
+                            <p class="text-sm text-gray-300 mt-4">
                                 🚀 Cài đặt miễn phí trên Chrome. Tinh chỉnh prompt ngay trên ChatGPT, Gemini, Claude!
                             </p>
                         </div>
