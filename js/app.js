@@ -2842,155 +2842,141 @@ function setSubject(sub) {
 // EXTENSION INSTALLATION
 // ==========================================
 function downloadInstallScript() {
-    const batContent = `@echo off
-chcp 65001 >nul
-setlocal enabledelayedexpansion
+    const psContent = `# Cài đặt AI Prompt Refiner Extension - PowerShell Script
+# Chạy: Right-click -> Run with PowerShell hoặc Windows PowerShell ISE
 
-echo.
-echo ======================================
-echo   Cài đặt AI Prompt Refiner Extension
-echo ======================================
-echo.
+Write-Host "======================================" -ForegroundColor Cyan
+Write-Host "  Cài đặt AI Prompt Refiner Extension" -ForegroundColor Cyan
+Write-Host "======================================" -ForegroundColor Cyan
+Write-Host ""
 
-:: Kiểm tra Administrator
-net session >nul 2>&1
-if %errorlevel% neq 0 (
-    echo ⚠️  Lỗi: Script cần quyền Administrator!
-    echo.
-    echo Vui lòng right-click file này và chọn "Run as Administrator"
-    echo.
-    pause
-    exit /b 1
+# Lấy đường dẫn script folder
+$scriptPath = $PSScriptRoot
+if ([string]::IsNullOrWhiteSpace($scriptPath)) {
+    $scriptPath = Get-Location
+}
+
+$extensionPath = Join-Path $scriptPath "extension"
+$manifestPath = Join-Path $extensionPath "manifest.json"
+
+Write-Host "📁 Kiểm tra thư mục extension..." -ForegroundColor Yellow
+if (-not (Test-Path $extensionPath)) {
+    Write-Host "❌ Không tìm thấy thư mục extension!" -ForegroundColor Red
+    Write-Host "   Kiểm tra: $extensionPath" -ForegroundColor Red
+    Read-Host "Nhấn Enter để thoát"
+    exit 1
+}
+
+if (-not (Test-Path $manifestPath)) {
+    Write-Host "❌ Không tìm thấy manifest.json!" -ForegroundColor Red
+    Read-Host "Nhấn Enter để thoát"
+    exit 1
+}
+
+Write-Host "✓ Tìm thấy extension tại: $extensionPath" -ForegroundColor Green
+Write-Host ""
+
+# Tìm Chrome
+Write-Host "🔍 Tìm Chrome/Edge installation..." -ForegroundColor Yellow
+
+$chromePath = $null
+$browserType = $null
+$possiblePaths = @(
+    @{ Path = "$env:ProgramFiles\\Google\\Chrome\\Application\\chrome.exe"; Type = "Chrome" },
+    @{ Path = "$env:ProgramFiles(x86)\\Google\\Chrome\\Application\\chrome.exe"; Type = "Chrome" },
+    @{ Path = "$env:LOCALAPPDATA\\Google\\Chrome\\Application\\chrome.exe"; Type = "Chrome" },
+    @{ Path = "$env:ProgramFiles\\Microsoft\\Edge\\Application\\msedge.exe"; Type = "Edge" },
+    @{ Path = "$env:ProgramFiles(x86)\\Microsoft\\Edge\\Application\\msedge.exe"; Type = "Edge" },
+    @{ Path = "$env:LOCALAPPDATA\\Microsoft\\Edge\\Application\\msedge.exe"; Type = "Edge" }
 )
 
-echo ✓ Chạy với quyền Administrator
-echo.
+foreach ($item in $possiblePaths) {
+    if (Test-Path $item.Path) {
+        $chromePath = $item.Path
+        $browserType = $item.Type
+        break
+    }
+}
 
-:: Lấy đường dẫn script folder
-cd /d "%~dp0"
-set "extensionPath=%cd%\\extension"
-set "manifestPath=%extensionPath%\\manifest.json"
+if (-not $chromePath) {
+    Write-Host "❌ Không tìm thấy Chrome hoặc Edge!" -ForegroundColor Red
+    Write-Host "Vui lòng cài đặt Chrome hoặc Edge trước khi chạy script này" -ForegroundColor Yellow
+    Read-Host "Nhấn Enter để thoát"
+    exit 1
+}
 
-echo 📁 Kiểm tra thư mục extension...
-if not exist "%extensionPath%" (
-    echo ❌ Không tìm thấy thư mục extension!
-    echo    Kiểm tra: %extensionPath%
-    echo.
-    pause
-    exit /b 1
-)
+Write-Host "✓ Tìm thấy $browserType tại: $chromePath" -ForegroundColor Green
+Write-Host ""
 
-if not exist "%manifestPath%" (
-    echo ❌ Không tìm thấy manifest.json!
-    echo.
-    pause
-    exit /b 1
-)
+# Tìm extensions folder
+Write-Host "📂 Tìm thư mục extensions..." -ForegroundColor Yellow
 
-echo ✓ Tìm thấy extension tại: %extensionPath%
-echo.
+if ($browserType -eq "Edge") {
+    $extensionsPath = "$env:LOCALAPPDATA\\Microsoft\\Edge\\User Data\\Default\\Extensions"
+} else {
+    $extensionsPath = "$env:LOCALAPPDATA\\Google\\Chrome\\User Data\\Default\\Extensions"
+}
 
-:: Tìm Chrome
-echo 🔍 Tìm Chrome installation...
-set "chromePath="
+if (-not (Test-Path $extensionsPath)) {
+    Write-Host "⚠️  Tạo thư mục extensions..." -ForegroundColor Yellow
+    New-Item -ItemType Directory -Path $extensionsPath -Force | Out-Null
+}
 
-if exist "%ProgramFiles%\\Google\\Chrome\\Application\\chrome.exe" (
-    set "chromePath=%ProgramFiles%\\Google\\Chrome\\Application\\chrome.exe"
-    set "browserType=Chrome"
-) else if exist "%ProgramFiles(x86)%\\Google\\Chrome\\Application\\chrome.exe" (
-    set "chromePath=%ProgramFiles(x86)%\\Google\\Chrome\\Application\\chrome.exe"
-    set "browserType=Chrome"
-) else if exist "%LocalAppData%\\Google\\Chrome\\Application\\chrome.exe" (
-    set "chromePath=%LocalAppData%\\Google\\Chrome\\Application\\chrome.exe"
-    set "browserType=Chrome"
-) else if exist "%ProgramFiles%\\Microsoft\\Edge\\Application\\msedge.exe" (
-    set "chromePath=%ProgramFiles%\\Microsoft\\Edge\\Application\\msedge.exe"
-    set "browserType=Edge"
-) else if exist "%ProgramFiles(x86)%\\Microsoft\\Edge\\Application\\msedge.exe" (
-    set "chromePath=%ProgramFiles(x86)%\\Microsoft\\Edge\\Application\\msedge.exe"
-    set "browserType=Edge"
-) else if exist "%LocalAppData%\\Microsoft\\Edge\\Application\\msedge.exe" (
-    set "chromePath=%LocalAppData%\\Microsoft\\Edge\\Application\\msedge.exe"
-    set "browserType=Edge"
-)
+Write-Host "✓ Extensions folder: $extensionsPath" -ForegroundColor Green
+Write-Host ""
 
-if not defined chromePath (
-    echo ❌ Không tìm thấy Chrome hoặc Edge!
-    echo.
-    pause
-    exit /b 1
-)
+# Copy extension
+Write-Host "📦 Copy extension files..." -ForegroundColor Yellow
 
-echo ✓ Tìm thấy %browserType% tại: %chromePath%
-echo.
+$destPath = Join-Path $extensionsPath "ai-prompt-refiner"
 
-:: Tìm extensions folder
-echo 📂 Tìm thư mục extensions...
-set "extensionsPath=%LocalAppData%\\Google\\Chrome\\User Data\\Default\\Extensions"
+if (Test-Path $destPath) {
+    Write-Host "   Xóa version cũ..." -ForegroundColor Gray
+    Remove-Item -Path $destPath -Recurse -Force -ErrorAction SilentlyContinue
+}
 
-if %browserType%==Edge (
-    set "extensionsPath=%LocalAppData%\\Microsoft\\Edge\\User Data\\Default\\Extensions"
-)
+Write-Host "   Copy files..." -ForegroundColor Gray
+try {
+    Copy-Item -Path "$extensionPath\\*" -Destination $destPath -Recurse -Force
+    Write-Host "✓ Copy thành công!" -ForegroundColor Green
+} catch {
+    Write-Host "❌ Lỗi khi copy files: $($_)" -ForegroundColor Red
+    Read-Host "Nhấn Enter để thoát"
+    exit 1
+}
 
-if not exist "%extensionsPath%" (
-    echo ⚠️  Tạo thư mục extensions...
-    mkdir "%extensionsPath%"
-)
+Write-Host ""
 
-echo ✓ Extensions folder: %extensionsPath%
-echo.
+# Mở Chrome Extensions page
+Write-Host "🌐 Mở $browserType Extensions page..." -ForegroundColor Yellow
+Write-Host ""
 
-:: Copy extension
-echo 📦 Copy extension files...
-set "destPath=%extensionsPath%\\ai-prompt-refiner"
+Start-Process -FilePath $chromePath -ArgumentList "chrome://extensions/" -ErrorAction SilentlyContinue
 
-if exist "%destPath%" (
-    echo   Xóa version cũ...
-    rmdir /s /q "%destPath%"
-)
+Write-Host "======================================" -ForegroundColor Green
+Write-Host "   ✓ Cài đặt thành công!" -ForegroundColor Green
+Write-Host "======================================" -ForegroundColor Green
+Write-Host ""
+Write-Host "📋 Bước tiếp theo:" -ForegroundColor Cyan
+Write-Host "   1. Bạn sẽ thấy trang Extensions mở ra" -ForegroundColor White
+Write-Host "   2. Tìm 'AI Prompt Refiner' trong danh sách" -ForegroundColor White
+Write-Host "   3. Kiểm tra xem nó đã bật (enabled) hay chưa" -ForegroundColor White
+Write-Host ""
+Write-Host "💡 Nếu bạn không thấy extension:" -ForegroundColor Yellow
+Write-Host "   - Reload trang (F5)" -ForegroundColor White
+Write-Host "   - Hoặc đóng $browserType và chạy lại script này" -ForegroundColor White
+Write-Host ""
 
-echo   Copy files...
-xcopy "%extensionPath%" "%destPath%" /E /I /Y >nul
-
-if %errorlevel% neq 0 (
-    echo ❌ Lỗi khi copy files!
-    echo.
-    pause
-    exit /b 1
-)
-
-echo ✓ Copy thành công!
-echo.
-
-:: Mở Chrome Extensions page
-echo 🌐 Mở Chrome Extensions page...
-echo.
-start "" "%chromePath%" "chrome://extensions/"
-
-echo.
-echo ======================================
-echo   ✓ Cài đặt thành công!
-echo ======================================
-echo.
-echo 📋 Bước tiếp theo:
-echo   1. Bạn sẽ thấy trang Extensions mở ra
-echo   2. Tìm "AI Prompt Refiner" trong danh sách
-echo   3. Kiểm tra xem nó đã bật (enabled) hay chưa
-echo.
-echo 💡 Nếu bạn không thấy extension:
-echo   - Reload trang (F5)
-echo   - Hoặc đóng Chrome và chạy lại script này
-echo.
-pause`;
+Read-Host "Nhấn Enter để kết thúc"`;
 
     const element = document.createElement('a');
-    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(batContent));
-    element.setAttribute('download', 'install-extension.bat');
+    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(psContent));
+    element.setAttribute('download', 'install-extension.ps1');
     element.style.display = 'none';
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
-    showToast('Đã tải file install-extension.bat!');
+    showToast('Đã tải file install-extension.ps1!');
 }
 
 function installExtension() {
@@ -3013,10 +2999,10 @@ function installExtension() {
                         <div class="flex-shrink-0 w-8 h-8 rounded-full ${getColorClass('softBg')} flex items-center justify-center font-bold ${getColorClass('text')} text-sm">1</div>
                         <div class="flex-1">
                             <p class="font-semibold ${styles.textPrimary} mb-1">Tải file cài đặt</p>
-                            <p class="${styles.textSecondary} text-sm mb-3">Nhấp nút dưới để tải file install-extension.bat</p>
+                            <p class="${styles.textSecondary} text-sm mb-3">Nhấp nút dưới để tải file install-extension.ps1</p>
                             <button onclick="downloadInstallScript()" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg ${getColorClass('bg')} hover:opacity-90 text-white font-semibold text-sm transition-all">
                                 <i data-lucide="download" size="16"></i>
-                                Tải install-extension.bat
+                                Tải install-extension.ps1
                             </button>
                         </div>
                     </div>
@@ -3026,8 +3012,9 @@ function installExtension() {
                     <div class="flex items-start gap-3">
                         <div class="flex-shrink-0 w-8 h-8 rounded-full ${getColorClass('softBg')} flex items-center justify-center font-bold ${getColorClass('text')} text-sm">2</div>
                         <div class="flex-1">
-                            <p class="font-semibold ${styles.textPrimary} mb-1">Chạy file with Administrator</p>
-                            <p class="${styles.textSecondary} text-sm">Nhấp chuột phải trên file install-extension.bat → Chọn <span class="font-mono bg-black/20 px-1.5 py-0.5 rounded text-xs">"Run as Administrator"</span></p>
+                            <p class="font-semibold ${styles.textPrimary} mb-1">Chạy file với PowerShell</p>
+                            <p class="${styles.textSecondary} text-sm mb-2">Nhấp chuột phải trên file <span class="font-mono bg-black/20 px-1.5 py-0.5 rounded text-xs">install-extension.ps1</span></p>
+                            <p class="${styles.textSecondary} text-sm">Chọn: <span class="font-bold">Run with PowerShell</span></p>
                         </div>
                     </div>
                 </div>
@@ -3048,7 +3035,17 @@ function installExtension() {
                     <i data-lucide="info" size="20" class="text-blue-500 flex-shrink-0 mt-0.5"></i>
                     <div>
                         <p class="font-semibold text-blue-600">💡 Mẹo</p>
-                        <p class="text-sm text-blue-600/80 mt-1">Nếu không thấy tiện ích, reload trang Extensions (F5) hoặc chạy lại file .bat</p>
+                        <p class="text-sm text-blue-600/80 mt-1">Nếu không thấy tiện ích, reload trang Extensions (F5) hoặc chạy lại file .ps1</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-lg bg-purple-500/10 border border-purple-500/30 p-4">
+                <div class="flex gap-3">
+                    <i data-lucide="rocket" size="20" class="text-purple-500 flex-shrink-0 mt-0.5"></i>
+                    <div>
+                        <p class="font-semibold text-purple-600">🚀 Sắp tới: Vercel Deployment</p>
+                        <p class="text-sm text-purple-600/80 mt-1">Sau khi deploy lên Vercel, sẽ có cách cài đặt dễ hơn với 1 click từ trang web chính</p>
                     </div>
                 </div>
             </div>
