@@ -225,6 +225,14 @@ function watchAuthState(callback) {
                     }
                 }
                 
+                // Sync public user profile (cập nhật name nếu thay đổi)
+                const publicUserRef = window.firebaseRef(window.firebaseDB, `publicUsers/${user.uid}`);
+                await window.firebaseSet(publicUserRef, {
+                    id: user.uid,
+                    email: user.email,
+                    name: userData.name || user.email.split('@')[0]
+                });
+                
                 // Lưu vào state global
                 state.currentUser = {
                     id: user.uid,
@@ -264,6 +272,14 @@ function watchAuthState(callback) {
                     };
                     
                     await window.firebaseSet(userRef, newUserData);
+                    
+                    // Tạo public user profile để tìm kiếm
+                    const publicUserRef = window.firebaseRef(window.firebaseDB, `publicUsers/${user.uid}`);
+                    await window.firebaseSet(publicUserRef, {
+                        id: user.uid,
+                        email: user.email,
+                        name: newUserData.name
+                    });
                     
                     state.currentUser = newUserData;
                     localStorage.setItem('pm_currentUser', JSON.stringify(state.currentUser));

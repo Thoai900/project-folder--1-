@@ -3595,9 +3595,9 @@ async function addFriend() {
     showToast('⏳ Đang tìm kiếm người dùng...');
     
     try {
-        // Tìm kiếm người dùng trên Firebase theo email
-        const usersRef = window.firebaseRef(window.firebaseDB, 'users');
-        const snapshot = await window.firebaseGet(usersRef);
+        // Tìm kiếm người dùng trong publicUsers (không cần permission đọc users)
+        const publicUsersRef = window.firebaseRef(window.firebaseDB, 'publicUsers');
+        const snapshot = await window.firebaseGet(publicUsersRef);
         
         if (!snapshot.exists()) {
             showToast('❌ Không tìm thấy người dùng!');
