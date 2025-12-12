@@ -211,11 +211,26 @@ function watchAuthState(callback) {
             const userData = await getUserData(user.uid);
             
             if (userData) {
+                // Chuyển đổi friends object thành array
+                let friends = [];
+                if (userData.friends) {
+                    if (Array.isArray(userData.friends)) {
+                        friends = userData.friends;
+                    } else {
+                        // Nếu friends là object, chuyển sang array
+                        friends = Object.entries(userData.friends).map(([id, data]) => ({
+                            id: id,
+                            ...data
+                        }));
+                    }
+                }
+                
                 // Lưu vào state global
                 state.currentUser = {
                     id: user.uid,
                     email: user.email,
-                    ...userData
+                    ...userData,
+                    friends: friends
                 };
                 
                 // Lưu vào localStorage để truy cập nhanh

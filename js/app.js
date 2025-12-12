@@ -344,6 +344,26 @@ async function searchUsersInFirebase(query) {
     return users;
 }
 
+async function addFriendToFirebase(userId, friendData) {
+    if (!window.firebaseDB) {
+        return { success: false, error: 'Firebase not initialized' };
+    }
+    
+    try {
+        const userRef = window.firebaseRef(window.firebaseDB, `users/${userId}/friends/${friendData.id}`);
+        await window.firebaseSet(userRef, {
+            name: friendData.name,
+            email: friendData.email,
+            addedAt: new Date().toISOString()
+        });
+        
+        return { success: true };
+    } catch (error) {
+        console.error('❌ Lỗi thêm bạn vào Firebase:', error);
+        return { success: false, error: error.message };
+    }
+}
+
 // ==========================================
 // 2. HELPER FUNCTIONS
 // ==========================================
@@ -3545,7 +3565,7 @@ function openFriendsModal() {
     openModal('friends');
 }
 
-function addFriend() {
+async function addFriend() {
     const emailInput = document.getElementById('friend-email-input');
     const email = emailInput.value.trim();
     
@@ -3555,6 +3575,11 @@ function addFriend() {
     }
     
     const user = state.currentUser;
+    if (!user) {
+        showToast('❌ Vui lòng đăng nhập!');
+        return;
+    }
+    
     if (!user.friends) user.friends = [];
     
     if (user.friends.some(f => f.email === email)) {
@@ -3562,35 +3587,64 @@ function addFriend() {
         return;
     }
     
-    const friendUser = state.users.find(u => u.email === email);
-    if (!friendUser) {
-        showToast('❌ Không tìm thấy người dùng!');
-        return;
-    }
-    
-    if (friendUser.email === user.email) {
+    if (email === user.email) {
         showToast('❌ Không thể kết bạn với chính mình!');
         return;
     }
     
-    user.friends.push({
-        id: friendUser.id,
-        name: friendUser.name,
-        email: friendUser.email
-    });
+    showToast('⏳ Đang tìm kiếm người dùng...');
     
-    // Save
-    localStorage.setItem('pm_currentUser', JSON.stringify(user));
-    const users = JSON.parse(localStorage.getItem('pm_users') || '[]');
-    const idx = users.findIndex(u => u.email === user.email);
-    if (idx !== -1) {
-        users[idx] = user;
-        localStorage.setItem('pm_users', JSON.stringify(users));
+    try {
+        // Tìm kiếm người dùng trên Firebase theo email
+        const usersRef = window.firebaseRef(window.firebaseDB, 'users');
+        const snapshot = await window.firebaseGet(usersRef);
+        
+        if (!snapshot.exists()) {
+            showToast('❌ Không tìm thấy người dùng!');
+            return;
+        }
+        
+        const allUsers = snapshot.val();
+        let friendUser = null;
+        
+        // Tìm user theo email
+        for (const userId in allUsers) {
+            if (allUsers[userId].email === email) {
+                friendUser = allUsers[userId];
+                break;
+            }
+        }
+        
+        if (!friendUser) {
+            showToast('❌ Không tìm thấy người dùng với email này!');
+            return;
+        }
+        
+        // Thêm bạn vào Firebase
+        const friendData = {
+            id: friendUser.id,
+            name: friendUser.name,
+            email: friendUser.email
+        };
+        
+        const result = await addFriendToFirebase(user.id, friendData);
+        
+        if (result.success) {
+            // Cập nhật state local
+            user.friends.push(friendData);
+            state.currentUser = user;
+            localStorage.setItem('pm_currentUser', JSON.stringify(user));
+            
+            emailInput.value = '';
+            showToast('✓ Đã kết bạn thành công!');
+            
+            // Re-render modal
+            openModal('friends');
+        }
+    } catch (error) {
+        console.error('❌ Lỗi thêm bạn:', error);
+        showToast('❌ Không thể thêm bạn. Vui lòng thử lại.');
     }
-    
-    emailInput.value = '';
-    showToast('✓ Đã kết bạn thành công!');
-    openFriendsModal();
 }
 
 function removeFriend(index) {
