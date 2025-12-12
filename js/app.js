@@ -2447,11 +2447,6 @@ function openModal(type, data = null) {
         modalContent.style.height = 'auto';
         renderLoginModal(modalBody);
     }
-    else if (type === 'guest-auth') {
-        modalContent.classList.replace('max-w-6xl', 'max-w-lg');
-        modalContent.style.height = 'auto';
-        renderGuestAuthModal(modalBody);
-    }
     else if (type === 'submitProblem') {
         modalContent.classList.replace('max-w-6xl', 'max-w-2xl');
         renderSubmitProblemModal(modalBody);
@@ -2685,21 +2680,6 @@ function renderLoginModal(container) {
                         Đăng nhập ngay
                     </button>
                 </form>
-
-                <div class="mt-8 space-y-4">
-                    <div class="relative">
-                        <div class="absolute inset-0 flex items-center">
-                            <div class="w-full border-t ${styles.border}"></div>
-                        </div>
-                        <div class="relative flex justify-center text-sm">
-                            <span class="${styles.inputBg} ${styles.textSecondary} px-2">hoặc</span>
-                        </div>
-                    </div>
-
-                    <button type="button" onclick="openModal('guest-auth')" class="w-full px-6 py-3 rounded-xl border ${styles.border} ${styles.textPrimary} hover:bg-purple-500/10 hover:border-purple-500 transition-all flex items-center justify-center gap-2 font-medium">
-                        <i data-lucide="user-check" size="18"></i> Tiếp Tục Với Tư Cách Khách
-                    </button>
-                </div>
 
                 <div class="mt-6 text-center">
                     <p class="${styles.textSecondary} text-sm">
@@ -3767,110 +3747,6 @@ function renderShareModal(container) {
 // ==========================================
 // Phone OTP Authentication Modal
 // ==========================================
-// ==========================================
-// Guest Authentication Modal
-// ==========================================
-function renderGuestAuthModal(container) {
-    const styles = getStyles();
-    
-    container.innerHTML = `
-        <div class="p-8 h-full flex flex-col items-center justify-center">
-            <div class="text-center mb-8">
-                <div class="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/30 mx-auto mb-4">
-                    <i data-lucide="user-check" class="text-white" size="32"></i>
-                </div>
-                <h2 class="text-3xl font-bold ${styles.textPrimary} mb-2">Đăng Nhập Ẩn Danh</h2>
-                <p class="${styles.textSecondary}">Khám phá ứng dụng mà không cần đăng ký</p>
-            </div>
-
-            <div class="w-full space-y-4">
-                <div class="p-4 bg-orange-500/10 border border-orange-500/30 rounded-xl space-y-3">
-                    <p class="font-bold text-orange-400 flex items-start gap-2">
-                        <i data-lucide="alert-triangle" size="18" class="flex-shrink-0 mt-0.5"></i>
-                        <span>Lưu ý về tài khoản khách:</span>
-                    </p>
-                    <ul class="text-sm text-orange-300/80 space-y-1 ml-6">
-                        <li>• Dữ liệu sẽ không được lưu khi bạn đăng xuất</li>
-                        <li>• Không thể đồng bộ giữa các thiết bị</li>
-                        <li>• Bạn có thể nâng cấp lên tài khoản thực sau</li>
-                    </ul>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium ${styles.textSecondary} mb-2">Tên Hiển Thị (Tuỳ Chọn)</label>
-                    <div class="relative">
-                        <i data-lucide="user" size="18" class="absolute left-4 top-3.5 ${styles.textSecondary}"></i>
-                        <input 
-                            type="text" 
-                            id="guest-name-input" 
-                            placeholder="VD: Khách User"
-                            class="w-full ${styles.inputBg} border ${styles.border} rounded-xl pl-12 pr-4 py-3 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all"
-                        >
-                    </div>
-                </div>
-
-                <button 
-                    onclick="handleGuestAuthLogin()"
-                    class="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold shadow-lg transition-all flex items-center justify-center gap-2"
-                >
-                    <i data-lucide="user-check" size="18"></i> Tiếp Tục Với Tư Cách Khách
-                </button>
-
-                <button 
-                    onclick="openModal('login')"
-                    class="w-full py-3 rounded-xl border ${styles.border} ${styles.textPrimary} hover:bg-indigo-500/10 hover:border-indigo-500 font-bold transition-all flex items-center justify-center gap-2"
-                >
-                    <i data-lucide="user" size="18"></i> Đăng Nhập Bằng Tài Khoản Thực
-                </button>
-            </div>
-
-            <div class="mt-6 text-center">
-                <p class="${styles.textSecondary} text-sm">
-                    Chưa có tài khoản?
-                    <button onclick="toggleAuthModeFromGuest()" class="text-indigo-500 font-bold hover:underline ml-1">Đăng ký ngay</button>
-                </p>
-            </div>
-        </div>
-    `;
-    lucide.createIcons();
-}
-
-// ==========================================
-// Handler Functions for Guest Auth
-// ==========================================
-async function handleGuestAuthLogin() {
-    const guestName = document.getElementById('guest-name-input').value || 'Guest User';
-
-    console.log('🔍 Attempting guest login with name:', guestName);
-    
-    showToast('⏳ Đang đăng nhập...');
-
-    try {
-        const result = await firebaseGuestLogin(guestName);
-
-        console.log('🔍 Guest login result:', result);
-
-        if (result.success) {
-            closeModal();
-            renderApp();
-            showToast('✓ Đăng nhập ẩn danh thành công!');
-        } else {
-            console.error('❌ Guest login failed:', result.error);
-            showToast(`❌ Lỗi: ${result.error || 'Không thể đăng nhập'}`);
-        }
-    } catch (error) {
-        console.error('❌ Exception during guest login:', error);
-        showToast(`❌ Lỗi: ${error.message}`);
-    }
-}
-
-function toggleAuthModeFromGuest() {
-    closeModal();
-    openModal('login');
-    window.isRegisterMode = true;
-    window.toggleAuthMode();
-}
-
 window.onload = () => {
     applyTheme();
     setupShortcuts();
