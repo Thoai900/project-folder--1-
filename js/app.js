@@ -245,9 +245,7 @@ let state = {
     isLoadingPrompts: false,
     loadingTimer: null,
     // Firebase sync
-    firebaseSynced: false,
-    // Learning context (PDF/YouTube extracted text)
-    currentLearningContext: ""
+    firebaseSynced: false
 };
 
 // ==========================================
@@ -454,161 +452,9 @@ function getColorClass(type) {
     }
 }
 
-// Extract text content from a PDF file (client-side) using pdf.js
-async function extractTextFromPDF(file) {
-    if (!file) return '';
-    try {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        let fullText = '';
 
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items.map(item => item.str).join(' ');
-            fullText += `--- Trang ${i} ---\n${pageText}\n`;
-        }
-        return fullText.trim();
-    } catch (error) {
-        console.error('❌ Lỗi đọc PDF:', error);
-        showToast('Không thể trích xuất văn bản từ PDF');
-        return '';
-    }
-}
 
-// =====================
-// Learning helpers (PDF/YouTube → context → actions)
-// =====================
-async function handlePDFUpload(input) {
-    const file = input?.files?.[0];
-    if (!file) return;
-    const text = await extractTextFromPDF(file);
-    if (text) {
-        state.currentLearningContext = text;
-        document.getElementById('learning-actions')?.classList.remove('hidden');
-        setLearningResult(`<pre class="whitespace-pre-wrap text-sm">${escapeHtml(text.substring(0, 2000))}${text.length > 2000 ? '\n... (đã rút gọn)' : ''}</pre>`);
-        showToast('Đã tải nội dung PDF');
-    }
-}
 
-async function handleYoutube() {
-    const urlInput = document.getElementById('youtube-url');
-    const url = urlInput?.value?.trim();
-    if (!url) {
-        showToast('Vui lòng nhập link YouTube');
-        return;
-    }
-    try {
-        const idToken = await getFirebaseIdToken();
-        const headers = { 'Content-Type': 'application/json' };
-        if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
-
-        const resp = await fetch('/api/youtube', {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ url })
-        });
-        const contentType = resp.headers.get('content-type') || '';
-        const raw = await resp.text();
-        if (!resp.ok) {
-            throw new Error(raw?.slice(0, 200) || `HTTP ${resp.status}`);
-        }
-        const data = contentType.includes('application/json') ? JSON.parse(raw || '{}') : { text: raw };
-        if (data.error) throw new Error(data.error);
-
-        state.currentLearningContext = data.text || '';
-        document.getElementById('learning-actions')?.classList.remove('hidden');
-        setLearningResult(`<pre class="whitespace-pre-wrap text-sm">${escapeHtml(data.text.substring(0, 2000))}${data.text.length > 2000 ? '\n... (đã rút gọn)' : ''}</pre>`);
-        showToast('Đã lấy phụ đề YouTube');
-    } catch (error) {
-        console.error(error);
-        showToast('Không lấy được phụ đề');
-    }
-}
-
-function setLearningResult(html) {
-    const result = document.getElementById('result-area');
-    if (result) result.innerHTML = html;
-}
-
-async function doSummarize() {
-    if (!state.currentLearningContext) {
-        showToast('Chưa có nội dung để tóm tắt');
-        return;
-    }
-    const prompt = `Tóm tắt ngắn gọn nội dung sau thành 5-7 gạch đầu dòng, tiếng Việt dễ hiểu:\n${state.currentLearningContext.substring(0, 30000)}...`;
-    try {
-        const text = await callGeminiAPI(prompt);
-        setLearningResult(`<pre class="whitespace-pre-wrap text-sm">${escapeHtml(text)}</pre>`);
-        showToast('Đã tóm tắt');
-    } catch (error) {
-        console.error(error);
-        showToast('Lỗi tóm tắt');
-    }
-}
-
-async function doMindMap() {
-    await generateMindMap(state.currentLearningContext);
-}
-
-async function doQuiz() {
-    await generateQuiz(state.currentLearningContext);
-}
-
-// Generate mindmap from current learning context
-async function generateMindMap(content) {
-    if (!content) {
-        showToast('Chưa có nội dung để tạo mindmap');
-        return;
-    }
-    const prompt = `
-    Dựa trên nội dung sau: "${content.substring(0, 30000)}..." 
-    Hãy tạo một sơ đồ tư duy bằng cú pháp Mermaid.js (graph TD hoặc mindmap).
-    Yêu cầu:
-    1. Chỉ trả về mã code Mermaid, không có lời dẫn, không có markdown ('''mermaid).
-    2. Các node phải ngắn gọn, súc tích.
-    3. Cấu trúc phân cấp rõ ràng.
-    `;
-    try {
-        const mermaidCode = await callGeminiAPI(prompt);
-        renderMermaid(mermaidCode.trim());
-        showToast('Đã tạo sơ đồ tư duy');
-    } catch (error) {
-        console.error(error);
-        showToast('Lỗi tạo mindmap');
-    }
-}
-
-// Generate quiz from learning context
-async function generateQuiz(content) {
-    if (!content) {
-        showToast('Chưa có nội dung để tạo quiz');
-        return;
-    }
-    const prompt = `
-    Dựa trên nội dung: "${content.substring(0, 30000)}..."
-    Hãy tạo 5 câu hỏi trắc nghiệm (Quiz) để kiểm tra kiến thức.
-    Định dạng JSON:
-    [
-        {
-            "question": "Câu hỏi?",
-            "options": ["A", "B", "C", "D"],
-            "answer": "Đáp án đúng (chữ cái)",
-            "explanation": "Giải thích ngắn gọn"
-        }
-    ]
-    Chỉ trả về JSON thuần.
-    `;
-    try {
-        const jsonResult = await callGeminiAPI(prompt);
-        const quizData = JSON.parse(jsonResult);
-        renderQuizUI(quizData);
-        showToast('Đã tạo quiz');
-    } catch (error) {
-        console.error(error);
-        showToast('Lỗi tạo quiz hoặc JSON không hợp lệ');
-    }
-}
 
 function toggleTheme() {
     state.theme = state.theme === 'dark' ? 'light' : 'dark';
@@ -636,33 +482,7 @@ async function callGeminiAPI(prompt) {
     return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
 
-// Render Mermaid code into #result-area
-function renderMermaid(code) {
-    const result = document.getElementById('result-area');
-    if (!result) return;
-    result.innerHTML = `<div class="mermaid">${code}</div>`;
-    if (window.mermaid) {
-        mermaid.initialize({ startOnLoad: false });
-        setTimeout(() => mermaid.run({ querySelector: '#result-area .mermaid' }), 0);
-    }
-}
 
-// Simple Quiz renderer into #result-area
-function renderQuizUI(quizData = []) {
-    const result = document.getElementById('result-area');
-    if (!result) return;
-    const cards = quizData.map((q, idx) => `
-        <div class="p-4 rounded-xl border ${getStyles().border} ${getStyles().cardBg} space-y-2">
-            <div class="font-bold ${getStyles().textPrimary}">Câu ${idx + 1}: ${q.question}</div>
-            <div class="space-y-1 text-sm ${getStyles().textSecondary}">
-                ${q.options.map((opt, oi) => `<div>${String.fromCharCode(65 + oi)}. ${opt}</div>`).join('')}
-            </div>
-            <div class="text-xs text-emerald-500 font-semibold">Đáp án: ${q.answer}</div>
-            <div class="text-xs ${getStyles().textSecondary}">Giải thích: ${q.explanation}</div>
-        </div>
-    `).join('');
-    result.innerHTML = cards || '<div class="text-sm opacity-70">Không có dữ liệu quiz.</div>';
-}
 
 function applyTheme() {
     const styles = getStyles();
@@ -2550,9 +2370,6 @@ function renderHero() {
                     <button onclick="openModal('scan')" class="px-5 py-3 rounded-lg ${getColorClass('bg')} ${getColorClass('bg-hover')} text-white font-bold shadow-lg shadow-indigo-500/30 flex items-center gap-2 button-glow">
                         <i data-lucide="scan" size="18"></i> Quét ảnh OCR
                     </button>
-                    <button onclick="openModal('learn')" class="px-5 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-lg shadow-emerald-500/30 flex items-center gap-2 button-glow">
-                        <i data-lucide="graduation-cap" size="18"></i> Học với tài liệu
-                    </button>
                     <button onclick="openModal('add')" class="px-5 py-3 rounded-lg ${styles.glass} ${styles.glassHover} border ${styles.border} ${styles.textPrimary} font-semibold flex items-center gap-2 button-glow">
                         <i data-lucide="sparkles" size="18"></i> Tạo prompt mới
                     </button>
@@ -2806,10 +2623,6 @@ function openModal(type, data = null) {
         modalContent.style.height = 'auto';
         renderShareModal(modalBody);
     }
-    else if (type === 'learn') {
-        modalContent.classList.replace('max-w-6xl', 'max-w-5xl');
-        renderLearnModal(modalBody);
-    }
     else if (type === 'friends') {
         modalContent.classList.replace('max-w-6xl', 'max-w-lg');
         modalContent.style.height = 'auto';
@@ -2834,14 +2647,12 @@ function closeModal() {
         modalBackdrop.classList.add('hidden');
         modalContent.classList.replace('max-w-lg', 'max-w-6xl');
         modalContent.classList.replace('max-w-4xl', 'max-w-6xl');
-        modalContent.classList.replace('max-w-5xl', 'max-w-6xl');
         modalContent.style.height = ''; 
         state.currentModal = null;
         state.activePrompt = null;
         state.activeTool = null;
         state.chatHistory = [];
-        state.scanResult = ""; 
-        state.currentLearningContext = "";
+        state.scanResult = "";
     }, 300);
 }
 
@@ -3108,58 +2919,7 @@ function renderScanModal(container) {
     `;
 }
 
-function renderLearnModal(container) {
-    const styles = getStyles();
-    state.currentLearningContext = "";
-    container.innerHTML = `
-        <div class="p-6 border-b ${styles.border} bg-gradient-to-r from-emerald-900/10 to-teal-900/10 flex items-start justify-between">
-            <div>
-                <p class="text-xs font-semibold text-emerald-500 uppercase tracking-[0.2em] mb-1">AI Tutor</p>
-                <h2 class="text-2xl font-bold ${styles.textPrimary} flex items-center gap-2"><i data-lucide="graduation-cap" class="text-emerald-500"></i> Học với tài liệu</h2>
-                <p class="text-sm ${styles.textSecondary} mt-2">Tải PDF hoặc nhập link YouTube để tóm tắt, vẽ mindmap hoặc tạo quiz nhanh.</p>
-            </div>
-        </div>
-        <div class="flex-1 p-6 grid md:grid-cols-2 gap-6 overflow-y-auto">
-            <div class="space-y-4">
-                <div class="space-y-2">
-                    <label class="block text-sm font-semibold ${styles.textPrimary}">Tải PDF</label>
-                    <input type="file" accept="application/pdf" onchange="handlePDFUpload(this)" class="w-full ${styles.inputBg} border ${styles.border} rounded-lg px-3 py-2 ${styles.textPrimary} text-sm outline-none focus:border-emerald-500 transition-all" />
-                </div>
-                <div class="space-y-2">
-                    <label class="block text-sm font-semibold ${styles.textPrimary}">Hoặc nhập link YouTube</label>
-                    <div class="flex gap-2">
-                        <input id="youtube-url" type="url" placeholder="https://www.youtube.com/watch?v=..." class="flex-1 ${styles.inputBg} border ${styles.border} rounded-lg px-3 py-2 ${styles.textPrimary} text-sm outline-none focus:border-emerald-500 transition-all" />
-                        <button onclick="handleYoutube()" class="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold shadow-lg shadow-emerald-500/30 transition-colors">Lấy phụ đề</button>
-                    </div>
-                </div>
-                <div class="${styles.cardBg} border ${styles.border} rounded-lg p-3 text-xs ${styles.textSecondary} space-y-1">
-                    <div class="font-semibold ${styles.textPrimary} flex items-center gap-2"><i data-lucide="shield-check" size="14"></i> Quy trình</div>
-                    <p>1) Tải PDF hoặc nhập link YouTube.</p>
-                    <p>2) Chọn hành động bên dưới.</p>
-                    <p>3) Xem kết quả ở panel bên phải.</p>
-                </div>
-                <div id="learning-actions" class="space-y-2 hidden">
-                    <p class="text-sm ${styles.textSecondary}">Chọn hành động:</p>
-                    <div class="flex flex-wrap gap-2">
-                        <button onclick="doSummarize()" class="px-3 py-2 border ${styles.border} rounded-lg ${styles.textPrimary} hover:bg-white/5">Tóm tắt</button>
-                        <button onclick="doMindMap()" class="px-3 py-2 border ${styles.border} rounded-lg ${styles.textPrimary} hover:bg-white/5">Mindmap</button>
-                        <button onclick="doQuiz()" class="px-3 py-2 border ${styles.border} rounded-lg ${styles.textPrimary} hover:bg-white/5">Tạo quiz</button>
-                    </div>
-                </div>
-            </div>
-            <div class="${styles.cardBg} border ${styles.border} rounded-xl p-4 flex flex-col gap-3 min-h-[320px]">
-                <div class="flex items-center justify-between">
-                    <p class="text-sm font-semibold ${styles.textPrimary}">Kết quả</p>
-                    <button onclick="state.currentLearningContext && copyToClipboard(state.currentLearningContext)" class="text-xs ${styles.textSecondary} hover:${styles.textPrimary} transition-colors">Copy nguồn</button>
-                </div>
-                <div id="result-area" class="flex-1 overflow-auto custom-scrollbar text-sm ${styles.textSecondary} rounded-lg p-3 ${state.theme === 'dark' ? 'bg-white/5' : 'bg-slate-50'}"></div>
-            </div>
-        </div>
-    `;
-    setLearningResult('<div class="text-sm opacity-70">Tải PDF hoặc nhập link YouTube để bắt đầu.</div>');
-    const actions = document.getElementById('learning-actions');
-    if (actions) actions.classList.add('hidden');
-}
+
 
 function renderAddModal(container, initialData = null) {
     const styles = getStyles();
