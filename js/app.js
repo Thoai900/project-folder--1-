@@ -295,21 +295,31 @@ function initFirebase() {
 
 // Sync user to Firebase
 async function syncUserToFirebase(user) {
-    if (!window.firebaseDB) return;
+    if (!window.firebaseDB || !user?.id) return;
     
-    const userRef = window.firebaseRef(window.firebaseDB, `users/${user.id}`);
-    await window.firebaseSet(userRef, {
-        email: user.email || null,
-        name: user.name || '',
-        userType: user.userType || 'student',
-        avatar: user.avatar || null,
-        createdAt: user.createdAt || new Date().toISOString(),
-        lastLogin: Date.now(),
-        customPrompts: user.customPrompts || [],
-        friends: user.friends || [],
-        favorites: user.favorites || [],
-        sharedPrompts: user.sharedPrompts || []
-    });
+    try {
+        // Đảm bảo user đã đăng nhập trước khi sync
+        if (!window.firebaseAuth?.currentUser) {
+            console.warn('⚠️ User chưa đăng nhập, không thể sync');
+            return;
+        }
+        
+        const userRef = window.firebaseRef(window.firebaseDB, `users/${user.id}`);
+        await window.firebaseSet(userRef, {
+            email: user.email || null,
+            name: user.name || '',
+            userType: user.userType || 'student',
+            avatar: user.avatar || null,
+            createdAt: user.createdAt || new Date().toISOString(),
+            lastLogin: Date.now(),
+            customPrompts: user.customPrompts || [],
+            friends: user.friends || [],
+            favorites: user.favorites || [],
+            sharedPrompts: user.sharedPrompts || []
+        });
+    } catch (error) {
+        console.error('❌ Lỗi sync user:', error);
+    }
 }
 
 // Sync prompt to Firebase
@@ -985,10 +995,16 @@ async function handleImageScan() {
     try {
         // Call internal serverless function for image scanning
         const url = '/api/image-scan';
+        const idToken = await getFirebaseIdToken();
+        
+        const headers = { 'Content-Type': 'application/json' };
+        if (idToken) {
+            headers['Authorization'] = `Bearer ${idToken}`;
+        }
         
         const response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify({
                 imageBase64: currentFileBase64,
                 mimeType: currentFileType,
@@ -1027,10 +1043,16 @@ async function refineScannedText() {
     try {
         // Call internal serverless function for text refinement
         const url = '/api/image-scan';
+        const idToken = await getFirebaseIdToken();
+        
+        const headers = { 'Content-Type': 'application/json' };
+        if (idToken) {
+            headers['Authorization'] = `Bearer ${idToken}`;
+        }
         
         const response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify({
                 action: 'refine',
                 currentText: currentText,
@@ -1163,10 +1185,16 @@ async function generateSmartPrompt() {
     try {
         // Call internal serverless function for smart prompt generation
         const url = '/api/smart-generate';
+        const idToken = await getFirebaseIdToken();
+        
+        const headers = { 'Content-Type': 'application/json' };
+        if (idToken) {
+            headers['Authorization'] = `Bearer ${idToken}`;
+        }
         
         const response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify({
                 idea: idea
             })
@@ -1434,6 +1462,17 @@ function typeWriter(element, htmlContent, speed = 100) {
     });
 }
 
+// Helper: Get Firebase ID Token for authenticated API calls
+async function getFirebaseIdToken() {
+    if (!window.firebaseAuth?.currentUser) return null;
+    try {
+        return await window.firebaseAuth.currentUser.getIdToken();
+    } catch (error) {
+        console.error('❌ Lỗi lấy token:', error);
+        return null;
+    }
+}
+
 // API Call Logic (Updated with better Error Handling & User Key)
 async function runPrompt() {
     const promptText = document.getElementById('preview-prompt').value;
@@ -1473,10 +1512,16 @@ async function runPrompt() {
     try {
         // Call internal serverless function endpoint
         const url = '/api/gemini';
+        const idToken = await getFirebaseIdToken();
+        
+        const headers = { 'Content-Type': 'application/json' };
+        if (idToken) {
+            headers['Authorization'] = `Bearer ${idToken}`;
+        }
         
         const response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify({ 
                 prompt: promptText,
                 temperature: temperature

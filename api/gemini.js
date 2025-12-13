@@ -1,6 +1,17 @@
 // Vercel Serverless Function for Google Gemini API
 // This function acts as a proxy to securely call Google Gemini API without exposing the API key
 
+const admin = require('firebase-admin');
+
+// Initialize Firebase Admin (Vercel provides env vars)
+if (!admin.apps.length) {
+    admin.initializeApp({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL
+    });
+}
+
 module.exports = async function handler(req, res) {
     // Only allow POST requests
     if (req.method !== 'POST') {
@@ -8,6 +19,21 @@ module.exports = async function handler(req, res) {
     }
 
     try {
+        // Extract and verify Firebase ID Token
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'Missing or invalid Authorization header. Please login first.' });
+        }
+
+        const idToken = authHeader.substring(7);
+        let decodedToken;
+        try {
+            decodedToken = await admin.auth().verifyIdToken(idToken);
+        } catch (error) {
+            console.error('Token verification failed:', error.message);
+            return res.status(401).json({ error: 'Invalid or expired token. Please login again.' });
+        }
+
         // Extract prompt and temperature from request body
         const { prompt, temperature = 0.7 } = req.body;
 
