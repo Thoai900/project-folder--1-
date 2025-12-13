@@ -1014,8 +1014,9 @@ async function handleImageScan() {
     }
     const loading = document.getElementById('scan-loading');
     const resultArea = document.getElementById('scan-result');
+    
     loading.classList.remove('hidden');
-    if(loading.querySelector('span')) loading.querySelector('span').innerText = "Đang phân tích ảnh...";
+    if(loading.querySelector('span')) loading.querySelector('span').innerText = "Đang phân tích & phân loại...";
 
     try {
         // Call internal serverless function for image scanning
@@ -1040,10 +1041,63 @@ async function handleImageScan() {
         const data = await response.json();
         if(data.error) throw new Error(data.error.message || data.error);
         
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Không tìm thấy văn bản nào.";
-        resultArea.value = text;
-        state.scanResult = text;
-        showToast("✓ Trích xuất thành công!");
+        // Get the text from Gemini response (should be JSON now)
+        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        if (!rawText) {
+            throw new Error('Không nhận được phản hồi từ API');
+        }
+        
+        try {
+            // Parse JSON response
+            const parsedData = JSON.parse(rawText);
+            
+            // SMART CLASSIFICATION LOGIC
+            if (parsedData.has_problem) {
+                // Case 1: Problem detected - auto-navigate to problem solving
+                state.scanResult = parsedData.problem_content;
+                resultArea.value = parsedData.problem_content;
+                
+                showToast("🔍 Phát hiện đề bài! Đang tìm prompt phù hợp...");
+                
+                // Auto-navigate and populate
+                setTimeout(() => {
+                    closeModal(); // Close current scan modal
+                    openModal('submitProblem'); // Open problem-solving modal
+                    
+                    // Fill in the detected problem
+                    const problemInput = document.getElementById('problem-input');
+                    if (problemInput) {
+                        problemInput.value = parsedData.problem_content;
+                        // Auto-trigger suggestion
+                        if (typeof suggestPromptsForProblem === 'function') {
+                            suggestPromptsForProblem();
+                        }
+                    }
+                }, 500);
+
+            } else if (parsedData.has_prompts) {
+                // Case 2: Only prompts detected
+                const promptsText = parsedData.detected_prompts.join('\n\n---\n\n');
+                state.scanResult = promptsText;
+                resultArea.value = promptsText;
+                showToast("✨ Đã trích xuất các prompt mẫu!");
+                
+            } else {
+                // Case 3: Fallback - return all content
+                state.scanResult = parsedData.problem_content || rawText;
+                resultArea.value = state.scanResult;
+                showToast("✓ Trích xuất thành công!");
+            }
+
+        } catch (parseError) {
+            // If JSON parsing fails, treat as raw text
+            console.warn("Non-JSON response:", rawText);
+            resultArea.value = rawText;
+            state.scanResult = rawText;
+            showToast("✓ Trích xuất văn bản thô thành công!");
+        }
+        
     } catch (error) {
         console.error('handleImageScan Error:', error);
         showToast("✗ Lỗi: " + error.message);
