@@ -1,8 +1,13 @@
-/* ============================================
-   Study Space - Main Logic & State Management
-   ============================================ */
+// ============================================
+// CONFIGURATION
+// ============================================
 
-// State Management
+// Change this to your actual Vercel domain
+const VERCEL_API_BASE = process.env.VERCEL_API_BASE || 'https://project-folder-1.vercel.app';
+
+// ============================================
+// INITIALIZATION
+// ============================================
 const StudyState = {
     // Current document
     currentDoc: null,
@@ -332,8 +337,8 @@ async function sendMessage() {
             fullPrompt = `Bạn là AI trợ lý học tập. Người dùng đang học tài liệu sau:\n\n${StudyState.pdfText.substring(0, 3000)}\n\nCâu hỏi của học sinh: ${message}\n\nHãy trả lời ngắn gọn, dễ hiểu và liên quan đến nội dung tài liệu.`;
         }
         
-        // Call Gemini API
-        const response = await fetch('/api/gemini', {
+        // Call Gemini API on Vercel
+        const response = await fetch(`${VERCEL_API_BASE}/api/gemini`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -451,7 +456,7 @@ async function generateAutoSummary(text) {
         const idToken = await user.getIdToken();
         const summaryPrompt = `Tóm tắt nội dung chính của tài liệu sau thành 3-5 ý chính:\n\n${text.substring(0, 5000)}`;
         
-        const response = await fetch('/api/gemini', {
+        const response = await fetch(`${VERCEL_API_BASE}/api/gemini`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
