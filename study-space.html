@@ -94,9 +94,13 @@
                 
                 <!-- Right: Actions & User Menu -->
                 <div class="header-actions">
-                    <a href="index.html" class="btn btn-secondary" title="Quay lại giao diện cũ">
+                    <button class="btn btn-primary" onclick="document.getElementById('pdf-upload').click()" title="Tải PDF lên">
+                        <i data-lucide="upload" width="16"></i>
+                        <span class="hidden sm:inline">Tải tài liệu</span>
+                    </button>
+                    <input type="file" id="pdf-upload" accept=".pdf" style="display: none;" onchange="handleFileUpload(event)">
+                    <a href="index.html" class="btn btn-icon" title="Quay lại giao diện cũ">
                         <i data-lucide="arrow-left" width="16"></i>
-                        <span class="hidden sm:inline">Classic</span>
                     </a>
                     <button class="btn btn-icon" id="toggle-theme" title="Light/Dark mode">
                         <i data-lucide="sun" width="18"></i>
@@ -266,9 +270,9 @@
                         
                         <!-- Input Footer -->
                         <div class="ai-panel-footer" id="chat-input">
-                            <div class="ai-input-wrapper">
-                                <input type="text" id="ai-input" placeholder="Hỏi AI..." onkeypress="handleChatInput(event)">
-                                <button class="btn btn-primary" onclick="sendMessage()" style="width: auto; padding: 0.5rem 1rem;">
+                            <div class="ai-input-wrapper" style="width: 100%;">
+                                <input type="text" id="ai-input" placeholder="Hỏi AI..." onkeypress="handleChatInput(event)" style="flex: 1;">
+                                <button class="btn btn-primary" onclick="sendMessage()" style="width: auto; padding: 0.5rem 1rem; flex-shrink: 0;">
                                     <i data-lucide="send" width="16"></i>
                                 </button>
                             </div>
@@ -280,7 +284,7 @@
     </div>
     
     <!-- FLOATING TOOLBAR -->
-    <div class="floating-toolbar" id="floating-toolbar">
+    <div class="floating-toolbar" id="floating-toolbar" style="bottom: 5rem; display: none;">
         <button class="floating-toolbar-btn" onclick="openTool('mindmap')" title="Mindmap">
             <i data-lucide="git-branch" width="18"></i>
         </button>

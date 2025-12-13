@@ -312,20 +312,37 @@ html.dark .header {
   }
 
   .header-content {
-    padding: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
   }
 
   .header-center {
     display: none;
   }
+  
+  .header-actions .btn span {
+    display: none !important;
+  }
 
   .canvas-container {
-    padding: var(--space-md);
-    gap: var(--space-md);
+    padding: var(--space-sm);
+    gap: var(--space-sm);
+    grid-template-columns: 1fr;
+  }
+  
+  .ai-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50vh;
+    max-height: 50vh;
+    z-index: 40;
+    border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
   }
 
   .floating-toolbar {
-    bottom: 1rem;
+    bottom: 5.5rem;
     right: 1rem;
     flex-direction: column;
     border-radius: var(--radius-2xl);
@@ -335,6 +352,15 @@ html.dark .header {
   .floating-toolbar-btn {
     width: 2.25rem;
     height: 2.25rem;
+  }
+  
+  .ai-input-wrapper input {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+  }
+  
+  .content-viewer-header {
+    padding: var(--space-sm);
+    gap: var(--space-xs);
   }
 }
 

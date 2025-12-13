@@ -11,6 +11,7 @@ const StudyState = {
     // PDF specific
     pdfFile: null,
     pdfDoc: null,
+    pdfText: '',
     currentPage: 1,
     totalPages: 0,
     pdfScale: 1.5,
@@ -301,7 +302,7 @@ function switchAITab(tab) {
     StudyState.currentAITab = tab;
 }
 
-function sendMessage() {
+async function sendMessage() {
     const input = document.getElementById('ai-input');
     const message = input.value.trim();
     
@@ -311,10 +312,54 @@ function sendMessage() {
     addChatMessage('user', message);
     input.value = '';
     
-    // Simulate AI response (replace with actual API call)
-    setTimeout(() => {
-        addChatMessage('ai', 'Đây là phản hồi từ AI. Tính năng chat sẽ được tích hợp trong các phiên bản tiếp theo.');
-    }, 500);
+    // Show typing indicator
+    const typingId = addTypingIndicator();
+    
+    try {
+        // Get Firebase auth token
+        const user = window.currentUser || window.firebaseAuth?.currentUser;
+        if (!user) {
+            removeTypingIndicator(typingId);
+            addChatMessage('ai', '⚠️ Vui lòng đăng nhập để sử dụng AI chat.');
+            return;
+        }
+        
+        const idToken = await user.getIdToken();
+        
+        // Prepare prompt with context
+        let fullPrompt = message;
+        if (StudyState.pdfText) {
+            fullPrompt = `Bạn là AI trợ lý học tập. Người dùng đang học tài liệu sau:\n\n${StudyState.pdfText.substring(0, 3000)}\n\nCâu hỏi của học sinh: ${message}\n\nHãy trả lời ngắn gọn, dễ hiểu và liên quan đến nội dung tài liệu.`;
+        }
+        
+        // Call Gemini API
+        const response = await fetch('/api/gemini', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({
+                prompt: fullPrompt,
+                temperature: 0.7
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('API request failed');
+        }
+        
+        const data = await response.json();
+        removeTypingIndicator(typingId);
+        
+        // Add AI response
+        addChatMessage('ai', data.response || data.text || '⚠️ Không nhận được phản hồi');
+        
+    } catch (error) {
+        console.error('❌ Chat error:', error);
+        removeTypingIndicator(typingId);
+        addChatMessage('ai', '⚠️ Lỗi kết nối API. Vui lòng thử lại sau.');
+    }
 }
 
 function addChatMessage(role, content) {
@@ -371,6 +416,68 @@ function resetChat() {
     `;
 }
 
+function addTypingIndicator() {
+    const chatHistory = document.getElementById('chat-history');
+    const typingDiv = document.createElement('div');
+    typingDiv.id = 'typing-indicator';
+    typingDiv.className = 'flex items-start gap-3 fade-in';
+    typingDiv.innerHTML = `
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+            <i data-lucide="sparkles" width="16" class="text-white"></i>
+        </div>
+        <div class="flex-1 bg-gray-100 rounded-lg p-3">
+            <div class="flex gap-1">
+                <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+                <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+                <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+            </div>
+        </div>
+    `;
+    chatHistory.appendChild(typingDiv);
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+    if (window.lucide) lucide.createIcons();
+    return 'typing-indicator';
+}
+
+function removeTypingIndicator(id) {
+    document.getElementById(id)?.remove();
+}
+
+async function generateAutoSummary(text) {
+    try {
+        const user = window.currentUser || window.firebaseAuth?.currentUser;
+        if (!user) return;
+        
+        const idToken = await user.getIdToken();
+        const summaryPrompt = `Tóm tắt nội dung chính của tài liệu sau thành 3-5 ý chính:\n\n${text.substring(0, 5000)}`;
+        
+        const response = await fetch('/api/gemini', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({
+                prompt: summaryPrompt,
+                temperature: 0.5
+            })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const summaryTab = document.getElementById('summary-tab');
+            summaryTab.innerHTML = `
+                <div class="text-sm text-gray-700 space-y-2">
+                    <h3 class="font-semibold text-indigo-600 mb-2">📝 Tóm tắt tự động</h3>
+                    <p class="whitespace-pre-wrap">${data.response || data.text}</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('❌ Auto-summary error:', error);
+    }
+}
+
 // ============================================
 // TOOLS & DIALOGS
 // ============================================
@@ -400,6 +507,60 @@ function toggleFullscreen() {
 }
 
 // ============================================
+// FILE UPLOAD
+// ============================================
+
+async function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    if (file.type !== 'application/pdf') {
+        showToast('⚠️ Chỉ hỗ trợ file PDF');
+        return;
+    }
+    
+    // Show loading
+    showToast('📄 Đang tải PDF...');
+    
+    // Load PDF
+    await loadDocument('pdf', file, file.name);
+    
+    // Extract text for AI context
+    extractPDFText(file);
+    
+    // Show floating toolbar
+    document.getElementById('floating-toolbar').style.display = 'flex';
+    
+    showToast('✅ Đã tải thành công!');
+}
+
+async function extractPDFText(file) {
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let fullText = '';
+        
+        // Extract first 5 pages for context
+        const pagesToExtract = Math.min(5, pdf.numPages);
+        for (let i = 1; i <= pagesToExtract; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join(' ');
+            fullText += pageText + '\n';
+        }
+        
+        // Store in state
+        StudyState.pdfText = fullText;
+        console.log('✅ Extracted PDF text:', fullText.substring(0, 200) + '...');
+        
+        // Auto-generate summary
+        generateAutoSummary(fullText);
+    } catch (error) {
+        console.error('❌ Error extracting PDF text:', error);
+    }
+}
+
+// ============================================
 // NAVIGATION
 // ============================================
 
@@ -416,6 +577,28 @@ function saveToStorage() {
     if (StudyState.currentDoc) {
         localStorage.setItem('study-last-doc', JSON.stringify(StudyState.currentDoc));
         localStorage.setItem('study-current-page', StudyState.currentPage);
+        
+        // Add to recent docs
+        let recentDocs = JSON.parse(localStorage.getItem('study-recent-docs') || '[]');
+        const docEntry = {
+            ...StudyState.currentDoc,
+            timestamp: new Date().toISOString(),
+            lastPage: StudyState.currentPage
+        };
+        
+        // Remove duplicate if exists
+        recentDocs = recentDocs.filter(d => d.title !== docEntry.title);
+        
+        // Add to beginning
+        recentDocs.unshift(docEntry);
+        
+        // Keep only last 5
+        recentDocs = recentDocs.slice(0, 5);
+        
+        localStorage.setItem('study-recent-docs', JSON.stringify(recentDocs));
+        
+        // Update UI
+        updateRecentDocs();
     }
 }
 
@@ -426,6 +609,41 @@ function loadFromStorage() {
         const page = parseInt(localStorage.getItem('study-current-page'), 10) || 1;
         StudyState.currentPage = page;
         console.log('Loaded from storage:', doc);
+    }
+    
+    // Load recent docs
+    updateRecentDocs();
+}
+
+function updateRecentDocs() {
+    const recentDocs = JSON.parse(localStorage.getItem('study-recent-docs') || '[]');
+    const container = document.getElementById('recent-docs');
+    
+    if (recentDocs.length === 0) {
+        container.innerHTML = '<p class="text-xs text-gray-400">Chưa có tài liệu nào</p>';
+        return;
+    }
+    
+    container.innerHTML = recentDocs.map(doc => `
+        <div class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer transition" onclick="loadRecentDoc('${doc.title}')">
+            <i data-lucide="${doc.type === 'pdf' ? 'file-text' : 'video'}" width="16" class="text-gray-400"></i>
+            <div class="flex-1 min-w-0">
+                <p class="text-xs font-medium text-gray-700 truncate">${escapeHtml(doc.title)}</p>
+                <p class="text-xs text-gray-400">${doc.type.toUpperCase()}</p>
+            </div>
+        </div>
+    `).join('');
+    
+    if (window.lucide) lucide.createIcons();
+}
+
+function loadRecentDoc(title) {
+    const recentDocs = JSON.parse(localStorage.getItem('study-recent-docs') || '[]');
+    const doc = recentDocs.find(d => d.title === title);
+    if (doc) {
+        showToast(`📄 Đang tải: ${doc.title}`);
+        // Note: Cannot reload file from localStorage, user needs to re-upload
+        // This is a limitation of browser security
     }
 }
 
