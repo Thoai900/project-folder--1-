@@ -1,0 +1,297 @@
+<!-- ============================================
+     Digital Study Space - Main Layout
+     ============================================ -->
+<!DOCTYPE html>
+<html lang="vi" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouLearn - Digital Study Space</title>
+    <link rel="icon" type="image/png" href="images/App.png">
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Design System CSS -->
+    <link rel="stylesheet" href="css/design-tokens.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/animations.css">
+    
+    <!-- Framer Motion (will use later) -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/framer-motion@10/dist/framer-motion.js"></script> -->
+    
+    <!-- PDF.js for client-side PDF viewing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    
+    <!-- Firebase (if needed) -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyA5JfpN7Sk3tdCBDa7u5coDbjrwx7D2GV8",
+            authDomain: "prompt-573fc.firebaseapp.com",
+            databaseURL: "https://prompt-573fc-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "prompt-573fc",
+            storageBucket: "prompt-573fc.firebasestorage.app",
+            messagingSenderId: "362695103484",
+            appId: "1:362695103484:web:036d2d722e6754aeaed879"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        
+        window.firebaseAuth = auth;
+        
+        onAuthStateChanged(auth, (user) => {
+            window.currentUser = user;
+            if (user) {
+                console.log('✅ User logged in:', user.email);
+            }
+        });
+    </script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { 
+            font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif; 
+            overflow: hidden;
+        }
+        h1, h2, h3 { 
+            font-family: 'Space Grotesk', 'Inter', system-ui, -apple-system, sans-serif; 
+        }
+    </style>
+</head>
+<body class="bg-light-bg text-light-text-primary">
+    <!-- APP CONTAINER -->
+    <div id="app" class="flex flex-col h-screen">
+        
+        <!-- HEADER -->
+        <header id="header" class="header">
+            <div class="header-content">
+                <!-- Brand -->
+                <a href="#" class="header-brand" onclick="goToLibrary()">
+                    <div class="w-8 h-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold text-sm">Y</span>
+                    </div>
+                    <span>YouLearn</span>
+                </a>
+                
+                <!-- Center: Current Document Title -->
+                <div class="header-center hidden md:flex items-center gap-2">
+                    <span id="doc-title" class="text-sm font-medium text-gray-600">Chọn tài liệu để bắt đầu học</span>
+                </div>
+                
+                <!-- Right: Actions & User Menu -->
+                <div class="header-actions">
+                    <button class="btn btn-icon" id="toggle-theme" title="Light/Dark mode">
+                        <i data-lucide="sun" width="18"></i>
+                    </button>
+                    <button class="btn btn-icon" id="toggle-sidebar" title="Toggle sidebar">
+                        <i data-lucide="menu" width="18"></i>
+                    </button>
+                    <button class="btn btn-icon" id="user-menu-btn" title="User menu">
+                        <i data-lucide="user" width="18"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+        
+        <!-- MAIN LAYOUT -->
+        <div class="flex flex-1 overflow-hidden">
+            
+            <!-- SIDEBAR -->
+            <aside id="sidebar" class="sidebar hidden md:flex md:flex-col">
+                <nav class="sidebar-nav">
+                    <a href="#" onclick="goToLibrary()" class="sidebar-nav-item active">
+                        <i data-lucide="home" width="20"></i>
+                        <span>Thư viện</span>
+                    </a>
+                    <a href="#" class="sidebar-nav-item">
+                        <i data-lucide="bookmark" width="20"></i>
+                        <span>Đã lưu</span>
+                    </a>
+                    <a href="#" class="sidebar-nav-item">
+                        <i data-lucide="history" width="20"></i>
+                        <span>Lịch sử</span>
+                    </a>
+                    <a href="#" class="sidebar-nav-item">
+                        <i data-lucide="settings" width="20"></i>
+                        <span>Cài đặt</span>
+                    </a>
+                </nav>
+                
+                <div style="margin-top: auto; padding-top: 2rem; border-top: 1px solid var(--border);">
+                    <div class="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Tài liệu gần đây</div>
+                    <div id="recent-docs" class="space-y-2">
+                        <p class="text-xs text-gray-400">Chưa có tài liệu nào</p>
+                    </div>
+                </div>
+            </aside>
+            
+            <!-- CANVAS - SPLIT SCREEN (Content + AI Panel) -->
+            <div class="canvas-wrapper">
+                <div class="canvas-container" id="canvas-container">
+                    
+                    <!-- LEFT: CONTENT VIEWER (60%) -->
+                    <div class="content-viewer" id="content-viewer">
+                        <div class="content-viewer-header">
+                            <div class="flex items-center gap-2">
+                                <button id="back-btn" class="btn btn-icon" onclick="goToLibrary()" title="Quay lại thư viện">
+                                    <i data-lucide="arrow-left" width="18"></i>
+                                </button>
+                                <span id="content-type" class="text-xs font-semibold text-indigo-600 uppercase">PDF</span>
+                            </div>
+                            <div id="viewer-tools" class="flex items-center gap-2">
+                                <button id="zoom-in-btn" class="btn btn-icon" onclick="zoomIn()" title="Phóng to">
+                                    <i data-lucide="zoom-in" width="18"></i>
+                                </button>
+                                <button id="zoom-out-btn" class="btn btn-icon" onclick="zoomOut()" title="Thu nhỏ">
+                                    <i data-lucide="zoom-out" width="18"></i>
+                                </button>
+                                <button id="fullscreen-btn" class="btn btn-icon" onclick="toggleFullscreen()" title="Toàn màn hình">
+                                    <i data-lucide="maximize" width="18"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Content Body -->
+                        <div class="content-viewer-body" id="content-viewer-body">
+                            <div id="pdf-container" style="display: none;">
+                                <canvas id="pdf-canvas" style="width: 100%; border: 1px solid var(--border); border-radius: var(--radius-lg);"></canvas>
+                            </div>
+                            <div id="video-container" style="display: none; aspect-ratio: 16/9; background: #000; border-radius: var(--radius-lg);">
+                                <iframe id="video-player" style="width: 100%; height: 100%; border: none; border-radius: var(--radius-lg);" allowfullscreen></iframe>
+                            </div>
+                            <div id="text-container" style="display: none; padding: 2rem;">
+                                <div id="text-content" class="prose prose-sm max-w-none"></div>
+                            </div>
+                            <div id="empty-state" class="flex flex-col items-center justify-center h-full">
+                                <i data-lucide="inbox" width="64" class="text-gray-300 mb-4"></i>
+                                <h3 class="text-lg font-semibold text-gray-700 mb-2">Chưa chọn tài liệu</h3>
+                                <p class="text-sm text-gray-500">Quay lại thư viện để chọn PDF, video hoặc tài liệu để học</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Footer with Page Navigator -->
+                        <div class="content-viewer-footer" id="content-footer">
+                            <span id="page-info" class="text-xs text-gray-600">Trang 1/0</span>
+                            <div class="flex items-center gap-2">
+                                <button id="prev-page-btn" class="btn btn-icon" onclick="prevPage()" title="Trang trước">
+                                    <i data-lucide="chevron-left" width="18"></i>
+                                </button>
+                                <input id="page-input" type="number" min="1" value="1" style="width: 50px; text-align: center;" onchange="goToPage(this.value)">
+                                <button id="next-page-btn" class="btn btn-icon" onclick="nextPage()" title="Trang tiếp">
+                                    <i data-lucide="chevron-right" width="18"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- RIGHT: AI ASSISTANT PANEL (40%) -->
+                    <div class="ai-panel" id="ai-panel">
+                        <div class="ai-panel-header">
+                            <i data-lucide="sparkles" width="18"></i>
+                            <span class="ai-panel-title">AI Trợ lý</span>
+                            <button class="btn btn-icon ml-auto" style="width: 1.5rem; height: 1.5rem; background: transparent;" onclick="closeAIPanel()" title="Đóng">
+                                <i data-lucide="x" width="16"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Tabs -->
+                        <div class="ai-panel-tabs">
+                            <button class="ai-tab active" onclick="switchAITab('chat')">Chat</button>
+                            <button class="ai-tab" onclick="switchAITab('summary')">Tóm tắt</button>
+                            <button class="ai-tab" onclick="switchAITab('tools')">Công cụ</button>
+                        </div>
+                        
+                        <!-- Content -->
+                        <div class="ai-panel-content" id="ai-panel-content">
+                            
+                            <!-- Chat Tab -->
+                            <div id="chat-tab" class="flex flex-col h-full">
+                                <div id="chat-history" class="flex-1 overflow-y-auto space-y-4 mb-4">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                                            <i data-lucide="sparkles" width="16" class="text-white"></i>
+                                        </div>
+                                        <div class="flex-1 bg-gray-100 rounded-lg p-3">
+                                            <p class="text-sm text-gray-700">Xin chào! 👋 Tôi là AI trợ lý của bạn. Hãy tải một tài liệu và tôi sẽ giúp bạn học tập hiệu quả hơn.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Summary Tab -->
+                            <div id="summary-tab" class="hidden flex flex-col h-full">
+                                <div class="text-sm text-gray-600 text-center py-8">
+                                    <p>Chưa có tóm tắt. Hãy tải một tài liệu để tạo tóm tắt.</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Tools Tab -->
+                            <div id="tools-tab" class="hidden flex flex-col h-full gap-3">
+                                <button class="btn btn-secondary w-full justify-start" onclick="openTool('mindmap')">
+                                    <i data-lucide="git-branch" width="18"></i>
+                                    <span>Tạo Mindmap</span>
+                                </button>
+                                <button class="btn btn-secondary w-full justify-start" onclick="openTool('flashcard')">
+                                    <i data-lucide="square" width="18"></i>
+                                    <span>Flashcard</span>
+                                </button>
+                                <button class="btn btn-secondary w-full justify-start" onclick="openTool('quiz')">
+                                    <i data-lucide="help-circle" width="18"></i>
+                                    <span>Tạo Quiz</span>
+                                </button>
+                                <button class="btn btn-secondary w-full justify-start" onclick="openTool('export')">
+                                    <i data-lucide="download" width="18"></i>
+                                    <span>Xuất ghi chú</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Input Footer -->
+                        <div class="ai-panel-footer" id="chat-input">
+                            <div class="ai-input-wrapper">
+                                <input type="text" id="ai-input" placeholder="Hỏi AI..." onkeypress="handleChatInput(event)">
+                                <button class="btn btn-primary" onclick="sendMessage()" style="width: auto; padding: 0.5rem 1rem;">
+                                    <i data-lucide="send" width="16"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- FLOATING TOOLBAR -->
+    <div class="floating-toolbar" id="floating-toolbar">
+        <button class="floating-toolbar-btn" onclick="openTool('mindmap')" title="Mindmap">
+            <i data-lucide="git-branch" width="18"></i>
+        </button>
+        <button class="floating-toolbar-btn" onclick="openTool('flashcard')" title="Flashcard">
+            <i data-lucide="square" width="18"></i>
+        </button>
+        <button class="floating-toolbar-btn" onclick="openTool('quiz')" title="Quiz">
+            <i data-lucide="help-circle" width="18"></i>
+        </button>
+        <button class="floating-toolbar-btn" onclick="openTool('notes')" title="Ghi chú">
+            <i data-lucide="pen-tool" width="18"></i>
+        </button>
+    </div>
+    
+    <!-- SCRIPTS -->
+    <script src="js/study-space.js"></script>
+</body>
+</html>
