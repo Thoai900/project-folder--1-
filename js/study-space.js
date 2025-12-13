@@ -1,11 +1,4 @@
 // ============================================
-// CONFIGURATION
-// ============================================
-
-// Change this to your actual Vercel domain
-const VERCEL_API_BASE = process.env.VERCEL_API_BASE || 'https://project-folder-1.vercel.app';
-
-// ============================================
 // INITIALIZATION
 // ============================================
 const StudyState = {
@@ -338,7 +331,7 @@ async function sendMessage() {
         }
         
         // Call Gemini API on Vercel
-        const response = await fetch(`${VERCEL_API_BASE}/api/gemini`, {
+        const response = await fetch(API_CONFIG.getFullUrl('GEMINI'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -456,7 +449,7 @@ async function generateAutoSummary(text) {
         const idToken = await user.getIdToken();
         const summaryPrompt = `Tóm tắt nội dung chính của tài liệu sau thành 3-5 ý chính:\n\n${text.substring(0, 5000)}`;
         
-        const response = await fetch(`${VERCEL_API_BASE}/api/gemini`, {
+        const response = await fetch(API_CONFIG.getFullUrl('GEMINI'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

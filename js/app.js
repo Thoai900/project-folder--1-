@@ -465,7 +465,7 @@ function toggleTheme() {
 
 // Generic Gemini caller with auth token
 async function callGeminiAPI(prompt) {
-    const url = '/api/gemini';
+    const url = API_CONFIG.getFullUrl('GEMINI');
     const idToken = await getFirebaseIdToken();
 
     const headers = { 'Content-Type': 'application/json' };
@@ -1019,7 +1019,7 @@ async function handleImageScan() {
 
     try {
         // Call internal serverless function for image scanning
-        const url = '/api/image-scan';
+        const url = API_CONFIG.getFullUrl('IMAGE_SCAN');
         const idToken = await getFirebaseIdToken();
         
         const headers = { 'Content-Type': 'application/json' };
@@ -1067,7 +1067,7 @@ async function refineScannedText() {
 
     try {
         // Call internal serverless function for text refinement
-        const url = '/api/image-scan';
+        const url = API_CONFIG.getFullUrl('IMAGE_SCAN');
         const idToken = await getFirebaseIdToken();
         
         const headers = { 'Content-Type': 'application/json' };
@@ -1209,7 +1209,7 @@ async function generateSmartPrompt() {
 
     try {
         // Call internal serverless function for smart prompt generation
-        const url = '/api/smart-generate';
+        const url = API_CONFIG.getFullUrl('SMART_GENERATE');
         const idToken = await getFirebaseIdToken();
         
         const headers = { 'Content-Type': 'application/json' };
@@ -1536,7 +1536,7 @@ async function runPrompt() {
 
     try {
         // Call internal serverless function endpoint
-        const url = '/api/gemini';
+        const url = API_CONFIG.getFullUrl('GEMINI');
         const idToken = await getFirebaseIdToken();
         
         const headers = { 'Content-Type': 'application/json' };
